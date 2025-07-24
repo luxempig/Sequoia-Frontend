@@ -31,19 +31,19 @@ export default function VoyageDetail() {
       </Link>
 
       <h2 className="text-2xl font-bold my-2">
-  Voyage {voyage.voyage_id}:{" "}
-  {new Date(voyage.start_timestamp)
-      .toLocaleString(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short"
-      })}{" "}
-  –{" "}
-  {new Date(voyage.end_timestamp)
-      .toLocaleString(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short"
-      })}
-</h2>
+        Voyage {voyage.voyage_id}:{" "}
+        {new Date(voyage.start_timestamp)
+            .toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short"
+            })}{" "}
+        –{" "}
+        {new Date(voyage.end_timestamp)
+            .toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short"
+            })}
+        </h2>
 
 
       <p className="mb-4"><strong>Notes:</strong> {voyage.notes}</p>
