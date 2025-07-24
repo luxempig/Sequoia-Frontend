@@ -3,10 +3,10 @@ import { useParams, Link } from 'react-router-dom';
 
 export default function VoyageDetail() {
   const { id } = useParams<{id: string}>();
-  const [voyage, setVoyage] = useState<any>(null);
-  const [media, setMedia] = useState<any[]>([]);
+  const [voyage, setVoyage]     = useState<any>(null);
+  const [media,   setMedia]     = useState<any[]>([]);
   const [passengers, setPassengers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -22,17 +22,27 @@ export default function VoyageDetail() {
   }, [id]);
 
   if (loading) return <p>Loading...</p>;
-  if (!voyage) return <p>Voyage not found</p>;
+  if (!voyage)  return <p>Voyage not found</p>;
 
   return (
     <div className="p-4">
-      <Link to="/" className="text-blue-500 hover:underline">
-        ← Back to timeline
-      </Link>
+      <Link to="/" className="text-blue-500 hover:underline">← Back to timeline</Link>
 
-      <h2 className="text-2xl font-bold my-2">
-        Voyage {voyage['voyage id']}: {voyage['start timestamp']} – {voyage['end timestamp']}
-      </h2>
+      <h1>
+  Voyage {voyage.voyage_id}:{" "}
+  {new Date(voyage.start_timestamp)
+      .toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short"
+      })}{" "}
+  –{" "}
+  {new Date(voyage.end_timestamp)
+      .toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short"
+      })}
+</h1>
+
 
       <p className="mb-4"><strong>Notes:</strong> {voyage.notes}</p>
       <p className="mb-6"><strong>Additional Info:</strong> {voyage.additional_info}</p>
@@ -41,7 +51,11 @@ export default function VoyageDetail() {
       <div className="grid grid-cols-2 gap-4 mb-6">
         {media.map(item => (
           <figure key={item.source_id}>
-            <img src={item.source_path} alt={item.source_description || 'Voyage media'} className="max-w-full rounded shadow" />
+            <img
+              src={item.source_path}
+              alt={item.source_description || 'Voyage media'}
+              className="max-w-full rounded shadow"
+            />
             <figcaption className="text-sm text-gray-600 mt-1">
               {item.source_type} — {item.source_origin}
               {item.page_num && ` (page ${item.page_num})`}
@@ -54,10 +68,15 @@ export default function VoyageDetail() {
       <h3 className="text-xl font-semibold">Passengers</h3>
       <ul className="list-disc list-inside">
         {passengers.map(p => (
-          <li key={p['passenger id']}>
+          <li key={p.passenger_id}>
             <strong>{p.name}</strong><br/>
             {p.basic_info}<br/>
-            <a href={p.bio_path} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+            <a
+              href={p.bio_path}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline"
+            >
               View bio
             </a>
           </li>
