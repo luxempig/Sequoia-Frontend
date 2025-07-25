@@ -10,9 +10,9 @@ export default function VoyageDetail() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`/voyages/${id}`).then(r => r.json()),
-      fetch(`/voyages/${id}/media`).then(r => r.json()),
-      fetch(`/voyages/${id}/passengers`).then(r => r.json()),
+      fetch(`/api/voyages/${id}`).then(r => r.json()),
+      fetch(`/api/voyages/${id}/media`).then(r => r.json()),
+      fetch(`/api/voyages/${id}/passengers`).then(r => r.json()),
     ]).then(([v, m, p]) => {
       setVoyage(v);
       setMedia(m);
