@@ -1,0 +1,47 @@
+name: Deploy Frontend to EC2
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install & Build
+        run: |
+          npm install
+          npm run build
+          zip -r build.zip build
+
+      - name: Upload build to EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY }}
+          source: "build.zip"
+          target: "/home/ec2-user"
+
+      - name: SSH into EC2 and deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            unzip -o build.zip
+            sudo mkdir -p /var/www/html
+            sudo rm -rf /var/www/html/*
+            sudo mv build/* /var/www/html/
+            rm -rf build build.zip
+            sudo systemctl reload nginx
