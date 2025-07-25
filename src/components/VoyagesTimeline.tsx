@@ -32,7 +32,7 @@ const VoyagesTimeline: React.FC = () => {
     });
     const query = params.toString() ? `?${params.toString()}` : '';
 
-    fetch(`/voyages${query}`)
+    fetch(`/api/voyages${query}`)
       .then(res => res.json())
       .then(setVoyages)
       .catch(console.error);

@@ -32,7 +32,7 @@ const VoyageList: React.FC = () => {
     });
     const query = params.toString() ? `?${params.toString()}` : '';
 
-    fetch(`/voyages${query}`)
+    fetch(`/api/voyages${query}`)
       .then(res => res.json())
       .then((data: Voyage[]) => setVoyages(data))
       .catch(err => console.error('Error loading voyages:', err));
