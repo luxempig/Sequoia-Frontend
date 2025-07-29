@@ -1,3 +1,4 @@
+// src/components/HomePage.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -12,13 +13,18 @@ interface Voyage {
 }
 
 export default function HomePage() {
-  const [searchTerm,   setSearchTerm]   = useState('');
-  const [significant,  setSignificant]  = useState(false);
-  const [royalty,      setRoyalty]      = useState(false);
-  const [dateFrom,     setDateFrom]     = useState('');
-  const [dateTo,       setDateTo]       = useState('');
-  const [voyages,      setVoyages]      = useState<Voyage[]>([]);
-  const [loading,      setLoading]      = useState(false);
+  const [inputValue, setInputValue]       = useState('');
+  const [searchTerm, setSearchTerm]       = useState('');
+  const [significant, setSignificant]     = useState(false);
+  const [royalty, setRoyalty]             = useState(false);
+  const [dateFrom, setDateFrom]           = useState('');
+  const [dateTo, setDateTo]               = useState('');
+  const [voyages, setVoyages]             = useState<Voyage[]>([]);
+  const [loading, setLoading]             = useState(false);
+
+  const handleSearch = () => {
+    setSearchTerm(inputValue);
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -38,7 +44,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-oak flex flex-col">
-      {/* Hero & Filters */}
+      {/* Hero / Filters */}
       <section className="flex-grow flex flex-col items-center justify-center p-8 text-center">
         <h1 className="text-6xl font-extrabold text-gray-800 mb-4">Sequoia Voyages</h1>
         <p className="text-lg text-gray-700 mb-8">
@@ -50,12 +56,12 @@ export default function HomePage() {
             <input
               type="text"
               placeholder="Search voyages..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
               className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-oak"
             />
             <button
-              onClick={() => {/* already wired via useEffect */}}
+              onClick={handleSearch}
               className="px-6 py-3 bg-oak text-gray-800 rounded-lg font-medium hover:opacity-90"
             >
               Search
@@ -108,7 +114,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Timeline Results */}
+      {/* About right under filters */}
+      <section id="about" className="bg-white py-16 px-8">
+        <h2 className="text-4xl font-semibold text-gray-800 mb-4">About</h2>
+        <p className="max-w-3xl text-gray-600 leading-relaxed">
+          This project showcases an interactive archive of presidential voyages aboard the USS Sequoia.
+          Filter by president, date, or keyword to explore detailed itineraries, passenger lists, and historical media.
+        </p>
+      </section>
+
+      {/* Timeline Results below About */}
       <section className="bg-white py-8 px-4">
         {loading ? (
           <p className="text-center">Loading voyages…</p>
@@ -118,8 +133,7 @@ export default function HomePage() {
           <ul className="timeline">
             {voyages
               .sort((a, b) =>
-                new Date(a.start_timestamp).getTime() -
-                new Date(b.start_timestamp).getTime()
+                new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime()
               )
               .map(v => (
                 <li key={v.voyage_id} className="timeline-item">
@@ -145,15 +159,6 @@ export default function HomePage() {
               ))}
           </ul>
         )}
-      </section>
-
-      {/* About */}
-      <section id="about" className="bg-white py-16 px-8">
-        <h2 className="text-4xl font-semibold text-gray-800 mb-4">About</h2>
-        <p className="max-w-3xl text-gray-600 leading-relaxed">
-          This project showcases an interactive archive of presidential voyages aboard the USS Sequoia.
-          Filter by president, date, or keyword to explore detailed itineraries, passenger lists, and historical media.
-        </p>
       </section>
     </div>
   );
