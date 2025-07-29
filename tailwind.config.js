@@ -3,7 +3,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        oak: '#3b2702ff',
+        oak: '#DED8CD',
       },
     },
   },
