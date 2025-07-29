@@ -1,18 +1,24 @@
+// File: src/components/HomePage.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function HomePage() {
-  const [query, setQuery]               = useState('');
-  const [significant, setSignificant]   = useState(false);
-  const [royalty, setRoyalty]           = useState(false);
+  const [query, setQuery]             = useState('');
+  const [significant, setSignificant] = useState(false);
+  const [royalty, setRoyalty]         = useState(false);
   const navigate = useNavigate();
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (query)         params.set('q', query);
-    if (significant)   params.set('significant', '1');
-    if (royalty)       params.set('royalty', '1');
+    if (query)       params.set('q', query);
+    if (significant) params.set('significant', '1');
+    if (royalty)     params.set('royalty', '1');
     navigate(`/voyages?${params.toString()}`);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSearch();
   };
 
   return (
@@ -22,8 +28,8 @@ export default function HomePage() {
         <h1 className="text-6xl font-extrabold mb-4">Sequoia Voyages</h1>
         <p className="text-lg mb-8">Your gateway to presidential journeys</p>
 
-        {/* Search & Filters */}
-        <div className="w-full max-w-xl bg-stone-300 bg-opacity-90 rounded-lg shadow p-6 flex flex-col space-y-4">
+        {/* Search & Filters Form */}
+        <form onSubmit={handleSubmit} className="w-full max-w-xl bg-stone-300 bg-opacity-90 rounded-lg shadow p-6 flex flex-col space-y-4">
           <input
             type="text"
             placeholder="Search voyages..."
@@ -53,19 +59,20 @@ export default function HomePage() {
 
           <div className="flex justify-center space-x-4">
             <button
-              onClick={handleSearch}
+              type="submit"
               className="px-6 py-3 bg-stone-600 text-white rounded-lg font-medium hover:opacity-90"
             >
               Search
             </button>
             <button
+              type="button"
               onClick={() => navigate('/voyages')}
               className="px-6 py-3 bg-stone-500 text-white rounded-lg font-medium hover:opacity-90"
             >
               View full voyage timeline
             </button>
           </div>
-        </div>
+        </form>
 
         {/* Scroll to About */}
         <button
