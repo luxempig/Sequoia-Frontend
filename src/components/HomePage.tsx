@@ -13,18 +13,16 @@ interface Voyage {
 }
 
 export default function HomePage() {
-  const [inputValue, setInputValue]       = useState('');
-  const [searchTerm, setSearchTerm]       = useState('');
-  const [significant, setSignificant]     = useState(false);
-  const [royalty, setRoyalty]             = useState(false);
-  const [dateFrom, setDateFrom]           = useState('');
-  const [dateTo, setDateTo]               = useState('');
-  const [voyages, setVoyages]             = useState<Voyage[]>([]);
-  const [loading, setLoading]             = useState(false);
+  const [inputValue, setInputValue]   = useState('');
+  const [searchTerm, setSearchTerm]   = useState('');
+  const [significant, setSignificant] = useState(false);
+  const [royalty, setRoyalty]         = useState(false);
+  const [dateFrom, setDateFrom]       = useState('');
+  const [dateTo, setDateTo]           = useState('');
+  const [voyages, setVoyages]         = useState<Voyage[]>([]);
+  const [loading, setLoading]         = useState(false);
 
-  const handleSearch = () => {
-    setSearchTerm(inputValue);
-  };
+  const handleSearch = () => setSearchTerm(inputValue);
 
   useEffect(() => {
     setLoading(true);
@@ -43,26 +41,26 @@ export default function HomePage() {
   }, [searchTerm, significant, royalty, dateFrom, dateTo]);
 
   return (
-    <div className="min-h-screen bg-oak flex flex-col">
+    <div className="min-h-screen bg-oak flex flex-col text-white">
       {/* Hero / Filters */}
       <section className="flex-grow flex flex-col items-center justify-center p-8 text-center">
-        <h1 className="text-6xl font-extrabold text-gray-800 mb-4">Sequoia Voyages</h1>
-        <p className="text-lg text-gray-700 mb-8">
-          Your gateway to historical presidential journeys
+        <h1 className="text-6xl font-extrabold mb-4">Sequoia Voyages</h1>
+        <p className="text-lg mb-8">
+          Welcome aboard.
         </p>
 
-        <div className="w-full max-w-2xl bg-white bg-opacity-90 rounded-lg shadow p-6 flex flex-col space-y-4">
+        <div className="w-full max-w-2xl bg-stone-300 bg-opacity-90 rounded-lg shadow p-6 flex flex-col space-y-4">
           <div className="flex space-x-4">
             <input
               type="text"
               placeholder="Search voyages..."
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
-              className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-oak"
+              className="flex-grow p-3 bg-stone-100 text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-oak"
             />
             <button
               onClick={handleSearch}
-              className="px-6 py-3 bg-oak text-gray-800 rounded-lg font-medium hover:opacity-90"
+              className="px-6 py-3 bg-stone-600 text-white rounded-lg font-medium hover:opacity-90"
             >
               Search
             </button>
@@ -93,7 +91,7 @@ export default function HomePage() {
                 type="date"
                 value={dateFrom}
                 onChange={e => setDateFrom(e.target.value)}
-                className="p-1 border border-gray-300 rounded"
+                className="p-1 bg-stone-100 text-gray-800 border border-gray-300 rounded"
               />
             </label>
 
@@ -103,28 +101,28 @@ export default function HomePage() {
                 type="date"
                 value={dateTo}
                 onChange={e => setDateTo(e.target.value)}
-                className="p-1 border border-gray-300 rounded"
+                className="p-1 bg-stone-100 text-gray-800 border border-gray-300 rounded"
               />
             </label>
           </div>
 
-          <a href="#about" className="mt-4 inline-block text-gray-800 font-medium hover:underline">
+          <a href="#about" className="mt-4 inline-block font-medium hover:underline">
             Learn more ↓
           </a>
         </div>
       </section>
 
-      {/* About right under filters */}
-      <section id="about" className="bg-white py-16 px-8">
-        <h2 className="text-4xl font-semibold text-gray-800 mb-4">About</h2>
-        <p className="max-w-3xl text-gray-600 leading-relaxed">
+      {/* About Section (white background) */}
+      <section id="about" className="bg-white py-16 px-8 text-gray-900">
+        <h2 className="text-4xl font-semibold mb-4">About</h2>
+        <p className="max-w-3xl leading-relaxed">
           This project showcases an interactive archive of presidential voyages aboard the USS Sequoia.
           Filter by president, date, or keyword to explore detailed itineraries, passenger lists, and historical media.
         </p>
       </section>
 
-      {/* Timeline Results below About */}
-      <section className="bg-white py-8 px-4">
+      {/* Timeline Results (white background) */}
+      <section className="bg-white py-8 px-4 text-gray-900">
         {loading ? (
           <p className="text-center">Loading voyages…</p>
         ) : voyages.length === 0 ? (
@@ -133,7 +131,8 @@ export default function HomePage() {
           <ul className="timeline">
             {voyages
               .sort((a, b) =>
-                new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime()
+                new Date(a.start_timestamp).getTime() -
+                new Date(b.start_timestamp).getTime()
               )
               .map(v => (
                 <li key={v.voyage_id} className="timeline-item">
