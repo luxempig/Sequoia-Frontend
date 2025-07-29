@@ -1,14 +1,17 @@
-// src/components/HomePage.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function HomePage() {
-  const [query, setQuery] = useState('');
+  const [query, setQuery]               = useState('');
+  const [significant, setSignificant]   = useState(false);
+  const [royalty, setRoyalty]           = useState(false);
   const navigate = useNavigate();
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (query) params.set('q', query);
+    if (query)         params.set('q', query);
+    if (significant)   params.set('significant', '1');
+    if (royalty)       params.set('royalty', '1');
     navigate(`/voyages?${params.toString()}`);
   };
 
@@ -19,7 +22,7 @@ export default function HomePage() {
         <h1 className="text-6xl font-extrabold mb-4">Sequoia Voyages</h1>
         <p className="text-lg mb-8">Your gateway to presidential journeys</p>
 
-        {/* Search & Timeline Button */}
+        {/* Search & Filters */}
         <div className="w-full max-w-xl bg-stone-300 bg-opacity-90 rounded-lg shadow p-6 flex flex-col space-y-4">
           <input
             type="text"
@@ -28,6 +31,25 @@ export default function HomePage() {
             onChange={e => setQuery(e.target.value)}
             className="p-3 bg-stone-100 text-gray-800 border border-gray-300 rounded-lg focus:outline-none"
           />
+
+          <div className="flex justify-center space-x-8">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={significant}
+                onChange={e => setSignificant(e.target.checked)}
+              />
+              <span className="text-white">Significant only</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={royalty}
+                onChange={e => setRoyalty(e.target.checked)}
+              />
+              <span className="text-white">Royalty onboard</span>
+            </label>
+          </div>
 
           <div className="flex justify-center space-x-4">
             <button
