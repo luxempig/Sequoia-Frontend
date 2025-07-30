@@ -1,3 +1,4 @@
+// File: src/components/VoyageList.tsx
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import './VoyageList.css';
@@ -26,16 +27,23 @@ const VoyageList: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams();
-    ['significant','royalty','date_from','date_to'].forEach(k => {
+    // include text-search param 'q' along with other filters
+    ['significant','royalty','date_from','date_to','q'].forEach(k => {
       const v = searchParams.get(k);
       if (v) params.set(k, v);
     });
     const query = params.toString() ? `?${params.toString()}` : '';
 
     fetch(`/api/voyages${query}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      })
       .then((data: Voyage[]) => setVoyages(data))
-      .catch(err => console.error('Error loading voyages:', err));
+      .catch(err => {
+        console.error('Error loading voyages:', err);
+        setVoyages([]);
+      });
   }, [searchParams]);
 
   return (
@@ -69,26 +77,38 @@ const VoyageList: React.FC = () => {
             onChange={e=> updateParam('date_to', e.target.value)}
           />
         </label>
+        <label>
+          Search: <input
+            type="text"
+            value={searchParams.get('q')||''}
+            onChange={e=> updateParam('q', e.target.value)}
+            placeholder="Keyword"
+          />
+        </label>
       </div>
 
       <div className="timeline">
-        {voyages
-          .sort((a,b)=> new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime())
-          .map(v => (
-            <div key={v.voyage_id} className="timeline-item">
-              <div className="timeline-marker" />
-              <div className="timeline-content">
-                <Link to={`/voyages/${v.voyage_id}`} className="voyage-card">
-                  <h3>{new Date(v.start_timestamp).toLocaleDateString()} – {new Date(v.end_timestamp).toLocaleDateString()}</h3>
-                  <div className="flags">
-                    {v.significant===1 && <span className="flag significant">Significant</span>}
-                    {v.royalty===1     && <span className="flag royalty">Royalty</span>}
-                  </div>
-                  <p className="info">{v.additional_info}</p>
-                </Link>
+        {voyages.length === 0 ? (
+          <p className="text-center">No voyages found.</p>
+        ) : (
+          voyages
+            .sort((a,b)=> new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime())
+            .map(v => (
+              <div key={v.voyage_id} className="timeline-item">
+                <div className="timeline-marker" />
+                <div className="timeline-content">
+                  <Link to={`/voyages/${v.voyage_id}`} className="voyage-card">
+                    <h3>{new Date(v.start_timestamp).toLocaleDateString()} – {new Date(v.end_timestamp).toLocaleDateString()}</h3>
+                    <div className="flags">
+                      {v.significant===1 && <span className="flag significant">Significant</span>}
+                      {v.royalty===1     && <span className="flag royalty">Royalty</span>}
+                    </div>
+                    <p className="info">{v.additional_info}</p>
+                  </Link>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+        )}
       </div>
     </div>
   );
