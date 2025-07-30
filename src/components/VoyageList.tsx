@@ -34,7 +34,7 @@ const VoyageList: React.FC = () => {
     });
     const query = params.toString() ? `?${params.toString()}` : '';
 
-    fetch(`/api/voyages${query}`)
+    fetch(`/voyages${query}`)
       .then(res => {
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         return res.json();
