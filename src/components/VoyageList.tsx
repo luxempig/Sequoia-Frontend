@@ -27,14 +27,15 @@ const VoyageList: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams();
-    // include text-search param 'q' along with other filters
+    // include filters and text-search param 'q'
     ['significant','royalty','date_from','date_to','q'].forEach(k => {
       const v = searchParams.get(k);
       if (v) params.set(k, v);
     });
     const query = params.toString() ? `?${params.toString()}` : '';
 
-    fetch(`/voyages${query}`)
+    // Call the backend API endpoint (absolute path)
+    fetch(`/api/voyages${query}`)
       .then(res => {
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         return res.json();
