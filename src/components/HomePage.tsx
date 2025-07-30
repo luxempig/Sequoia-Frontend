@@ -25,8 +25,8 @@ export default function HomePage() {
     <div className="min-h-screen bg-oak flex flex-col text-white">
       {/* Full-screen Hero */}
       <section className="flex-grow flex flex-col items-center justify-center p-8 text-center">
-        <h1 className="text-6xl font-extrabold mb-4">Sequoia Voyages</h1>
-        <p className="text-lg mb-8">Your gateway to presidential journeys</p>
+        <h1 className="text-6xl font-extrabold mb-4">Hi Isabel :)</h1>
+        <p className="text-lg mb-8">hi Isabel you are so awesome :DD</p>
 
         {/* Search & Filters Form */}
         <form onSubmit={handleSubmit} className="w-full max-w-xl bg-stone-300 bg-opacity-90 rounded-lg shadow p-6 flex flex-col space-y-4">
