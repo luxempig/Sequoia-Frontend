@@ -1,7 +1,8 @@
 // File: src/components/VoyageList.tsx
-import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import './VoyageList.css';
+import React, { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import PresidentFilter from "./PresidentFilter";
+import "./VoyageList.css";
 
 interface Voyage {
   voyage_id: number;
@@ -11,123 +12,138 @@ interface Voyage {
   notes: string;
   significant: number;
   royalty: number;
+  president_id: number | null;
+  president_name: string | null;
 }
 
 const VoyageList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [voyages, setVoyages] = useState<Voyage[]>([]);
-  const [localQ, setLocalQ] = useState(searchParams.get('q') || '');
+  const [localQ, setLocalQ] = useState(searchParams.get("q") || "");
 
-  // helper to update filters in URL
+  // helper to patch a single URL param
   const updateParam = (key: string, value: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (value) params.set(key, value);
-    else params.delete(key);
-    setSearchParams(params);
+    const next = new URLSearchParams(searchParams);
+    value ? next.set(key, value) : next.delete(key);
+    setSearchParams(next);
   };
 
-  // only update URL when user clicks Search
-  const handleSearch = () => {
-    updateParam('q', localQ);
-  };
+  // only push text search on click
+  const handleSearch = () => updateParam("q", localQ);
 
+  // fetch voyages whenever params change
   useEffect(() => {
-    const params = new URLSearchParams();
-    // include filters and text-search param 'q'
-    ['significant','royalty','date_from','date_to','q'].forEach(k => {
-      const v = searchParams.get(k);
-      if (v) params.set(k, v);
-    });
-    const query = params.toString() ? `?${params.toString()}` : '';
-
-    // Fetch from backend
-    fetch(`/api/voyages${query}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        return res.json();
-      })
-      .then((data: Voyage[]) => setVoyages(data))
-      .catch(err => {
-        console.error('Error loading voyages:', err);
+    const qs = searchParams.toString();
+    fetch(`/api/voyages${qs ? "?" + qs : ""}`)
+      .then((r) => r.json())
+      .then(setVoyages)
+      .catch((e) => {
+        console.error("API error:", e);
         setVoyages([]);
       });
   }, [searchParams]);
 
+  /* ---------- group voyages by president_name ---------- */
+  const grouped: Record<string, Voyage[]> = voyages.reduce((acc, v) => {
+    const key = v.president_name ?? "Non-presidential";
+    (acc[key] ||= []).push(v);
+    return acc;
+  }, {} as Record<string, Voyage[]>);
+
+  const sortedGroups = Object.entries(grouped).sort(
+    ([a], [b]) => (a === "Non-presidential" ? 1 : 0) - (b === "Non-presidential" ? 1 : 0)
+  );
+
   return (
     <div className="voyage-list-container">
-      <div className="filters">
+      {/* ----- FILTER BAR ----- */}
+      <div className="filters items-center">
         <label>
           <input
             type="checkbox"
-            checked={Boolean(searchParams.get('significant'))}
-            onChange={e => updateParam('significant', e.target.checked ? '1' : '')}
-          /> Significant only
+            checked={Boolean(searchParams.get("significant"))}
+            onChange={(e) => updateParam("significant", e.target.checked ? "1" : "")}
+          />{" "}
+          Significant
         </label>
         <label>
           <input
             type="checkbox"
-            checked={Boolean(searchParams.get('royalty'))}
-            onChange={e => updateParam('royalty', e.target.checked ? '1' : '')}
-          /> Royalty onboard
+            checked={Boolean(searchParams.get("royalty"))}
+            onChange={(e) => updateParam("royalty", e.target.checked ? "1" : "")}
+          />{" "}
+          Royalty onboard
         </label>
         <label>
-          From: <input
-            type="date"
-            value={searchParams.get('date_from')||''}
-            onChange={e => updateParam('date_from', e.target.value)}
-          />
-        </label>
-        <label>
-          To: <input
-            type="date"
-            value={searchParams.get('date_to')||''}
-            onChange={e => updateParam('date_to', e.target.value)}
-          />
-        </label>
-        <label>
-          Search:
+          From:{" "}
           <input
-            type="text"
-            value={localQ}
-            onChange={e => setLocalQ(e.target.value)}
-            placeholder="Keyword"
-            className="ml-2 p-1 border border-gray-300 rounded"
+            type="date"
+            value={searchParams.get("date_from") || ""}
+            onChange={(e) => updateParam("date_from", e.target.value)}
           />
-          <button
-            onClick={handleSearch}
-            className="ml-2 px-3 py-1 bg-stone-600 text-white rounded hover:opacity-90"
-          >
-            Search
-          </button>
         </label>
+        <label>
+          To:{" "}
+          <input
+            type="date"
+            value={searchParams.get("date_to") || ""}
+            onChange={(e) => updateParam("date_to", e.target.value)}
+          />
+        </label>
+
+        {/* president dropdown */}
+        <PresidentFilter />
+
+        {/* text search */}
+        <input
+          type="text"
+          value={localQ}
+          onChange={(e) => setLocalQ(e.target.value)}
+          placeholder="Keyword"
+          className="ml-2 p-1 border rounded"
+        />
+        <button onClick={handleSearch} className="ml-2 px-3 py-1 bg-stone-600 text-white rounded">
+          Search
+        </button>
       </div>
 
-      <div className="timeline">
-        {voyages.length === 0 ? (
-          <p className="text-center">No voyages found.</p>
-        ) : (
-          voyages
-            .sort((a, b) => new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime())
-            .map(v => (
-              <div key={v.voyage_id} className="timeline-item">
-                <div className="timeline-marker" />
-                <div className="timeline-content">
-                  <Link to={`/voyages/${v.voyage_id}`} className="voyage-card">
-                    <h3>
-                      {new Date(v.start_timestamp).toLocaleDateString()} –{' '}
-                      {new Date(v.end_timestamp).toLocaleDateString()}
-                    </h3>
-                    <div className="flags">
-                      {v.significant === 1 && <span className="flag significant">Significant</span>}
-                      {v.royalty === 1 && <span className="flag royalty">Royalty</span>}
+      {/* ----- TIMELINE ----- */}
+      {voyages.length === 0 ? (
+        <p className="text-center">No voyages found.</p>
+      ) : (
+        <div className="timeline">
+          {sortedGroups.map(([header, items]) => (
+            <section key={header}>
+              <h2 className="text-xl font-semibold mb-3">
+                {header === "Non-presidential" ? "Before / After Presidential Use" : `${header} Administration`}
+              </h2>
+
+              {items
+                .sort(
+                  (a, b) => new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime()
+                )
+                .map((v) => (
+                  <div key={v.voyage_id} className="timeline-item">
+                    <div className="timeline-marker" />
+                    <div className="timeline-content">
+                      <Link to={`/voyages/${v.voyage_id}`} className="voyage-card">
+                        <h3>
+                          {new Date(v.start_timestamp).toLocaleDateString()} –{" "}
+                          {new Date(v.end_timestamp).toLocaleDateString()}
+                        </h3>
+                        <div className="flags">
+                          {v.significant === 1 && <span className="flag significant">Significant</span>}
+                          {v.royalty === 1 && <span className="flag royalty">Royalty</span>}
+                        </div>
+                        <p className="info">{v.additional_info}</p>
+                      </Link>
                     </div>
-                    <p className="info">{v.additional_info}</p>
-                  </Link>
-                </div>
-              </div>
-            ))
-        )}
-      </div>
+                  </div>
+                ))}
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
