@@ -1,3 +1,4 @@
+// src/components/PresidentFilter.tsx
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -10,36 +11,14 @@ interface President {
 
 /**
  * Dropdown tied to the URL `president_id` query-param.
- * Fetches its options from GET /api/presidents.
+ * Options come from GET /api/presidents.
  */
 const PresidentFilter: React.FC = () => {
   const [presidents, setPresidents] = useState<President[]>([]);
   const [params, setParams] = useSearchParams();
   const active = params.get("president_id") ?? "";
 
-  // load once
-  useEffect(() => {
-    fetch("/api/presidents")
-      .then((r) => r.json())import React, { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-
-interface President {
-  president_id: number;
-  full_name: string;
-  term_start: string;
-  term_end: string;
-}
-
-/**
- * Dropdown tied to the URL `president_id` query-param.
- * Fetches its options from GET /api/presidents.
- */
-const PresidentFilter: React.FC = () => {
-  const [presidents, setPresidents] = useState<President[]>([]);
-  const [params, setParams] = useSearchParams();
-  const active = params.get("president_id") ?? "";
-
-  // load once
+  /* fetch once on mount */
   useEffect(() => {
     fetch("/api/presidents")
       .then((r) => r.json())
@@ -49,10 +28,12 @@ const PresidentFilter: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const next = new URLSearchParams(params);
-    e.target.value ? next.set("president_id", e.target.value) : next.delete("president_id");
+    e.target.value ? next.set("president_id", e.target.value)
+                   : next.delete("president_id");
     setParams(next);
   };
 
+  /* ----------  RETURN THE JSX  ---------- */
   return (
     <select
       value={active}
@@ -70,10 +51,3 @@ const PresidentFilter: React.FC = () => {
 };
 
 export default PresidentFilter;
-
-      .then(setPresidents)
-      .catch(console.error);
-  }, []);
-
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const next = new URLSearchParams
