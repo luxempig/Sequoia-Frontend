@@ -16,13 +16,19 @@ interface Voyage {
 const VoyageList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [voyages, setVoyages] = useState<Voyage[]>([]);
+  const [localQ, setLocalQ] = useState(searchParams.get('q') || '');
 
-  // helper to update filters
+  // helper to update filters in URL
   const updateParam = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
     if (value) params.set(key, value);
     else params.delete(key);
     setSearchParams(params);
+  };
+
+  // only update URL when user clicks Search
+  const handleSearch = () => {
+    updateParam('q', localQ);
   };
 
   useEffect(() => {
@@ -34,7 +40,7 @@ const VoyageList: React.FC = () => {
     });
     const query = params.toString() ? `?${params.toString()}` : '';
 
-    // Call the backend API endpoint (absolute path)
+    // Fetch from backend
     fetch(`/api/voyages${query}`)
       .then(res => {
         if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -68,23 +74,31 @@ const VoyageList: React.FC = () => {
           From: <input
             type="date"
             value={searchParams.get('date_from')||''}
-            onChange={e=> updateParam('date_from', e.target.value)}
+            onChange={e => updateParam('date_from', e.target.value)}
           />
         </label>
         <label>
           To: <input
             type="date"
             value={searchParams.get('date_to')||''}
-            onChange={e=> updateParam('date_to', e.target.value)}
+            onChange={e => updateParam('date_to', e.target.value)}
           />
         </label>
         <label>
-          Search: <input
+          Search:
+          <input
             type="text"
-            value={searchParams.get('q')||''}
-            onChange={e=> updateParam('q', e.target.value)}
+            value={localQ}
+            onChange={e => setLocalQ(e.target.value)}
             placeholder="Keyword"
+            className="ml-2 p-1 border border-gray-300 rounded"
           />
+          <button
+            onClick={handleSearch}
+            className="ml-2 px-3 py-1 bg-stone-600 text-white rounded hover:opacity-90"
+          >
+            Search
+          </button>
         </label>
       </div>
 
@@ -93,16 +107,19 @@ const VoyageList: React.FC = () => {
           <p className="text-center">No voyages found.</p>
         ) : (
           voyages
-            .sort((a,b)=> new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime())
+            .sort((a, b) => new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime())
             .map(v => (
               <div key={v.voyage_id} className="timeline-item">
                 <div className="timeline-marker" />
                 <div className="timeline-content">
                   <Link to={`/voyages/${v.voyage_id}`} className="voyage-card">
-                    <h3>{new Date(v.start_timestamp).toLocaleDateString()} – {new Date(v.end_timestamp).toLocaleDateString()}</h3>
+                    <h3>
+                      {new Date(v.start_timestamp).toLocaleDateString()} –{' '}
+                      {new Date(v.end_timestamp).toLocaleDateString()}
+                    </h3>
                     <div className="flags">
-                      {v.significant===1 && <span className="flag significant">Significant</span>}
-                      {v.royalty===1     && <span className="flag royalty">Royalty</span>}
+                      {v.significant === 1 && <span className="flag significant">Significant</span>}
+                      {v.royalty === 1 && <span className="flag royalty">Royalty</span>}
                     </div>
                     <p className="info">{v.additional_info}</p>
                   </Link>
