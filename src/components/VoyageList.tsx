@@ -15,10 +15,44 @@ interface Voyage {
   president_name: string | null;
 }
 
+const formatRange = (startISO: string, endISO: string) => {
+  try {
+    const start = new Date(startISO);
+    const end = new Date(endISO);
+    const sameDay =
+      start.toDateString() === end.toDateString() ||
+      (isNaN(end.getTime()) && !isNaN(start.getTime()));
+    return sameDay
+      ? start.toLocaleDateString()
+      : `${start.toLocaleDateString()} – ${end.toLocaleDateString()}`;
+  } catch {
+    return `${startISO} – ${endISO}`;
+  }
+};
+
+const Badge: React.FC<{
+  children: React.ReactNode;
+  tone?: "amber" | "violet";
+}> = ({ children, tone = "amber" }) => {
+  const toneClass =
+    tone === "amber"
+      ? "bg-amber-100 text-amber-800 ring-amber-200"
+      : "bg-violet-100 text-violet-800 ring-violet-200";
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ring-1 ${toneClass}`}
+    >
+      {children}
+    </span>
+  );
+};
+
 const VoyageList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [voyages, setVoyages] = useState<Voyage[]>([]);
   const [localQ, setLocalQ] = useState(searchParams.get("q") || "");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // helper to patch a single URL param
   const updateParam = (key: string, value: string) => {
@@ -30,15 +64,37 @@ const VoyageList: React.FC = () => {
   // only push text search on click
   const handleSearch = () => updateParam("q", localQ);
 
+  const clearFilters = () => {
+    const keys = [
+      "q",
+      "significant",
+      "royalty",
+      "date_from",
+      "date_to",
+      "president_id",
+    ];
+    const next = new URLSearchParams(searchParams);
+    keys.forEach((k) => next.delete(k));
+    setLocalQ("");
+    setSearchParams(next);
+  };
+
   // fetch voyages whenever params change
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     const qs = searchParams.toString();
     fetch(`/api/voyages${qs ? "?" + qs : ""}`)
-      .then((r) => r.json())
-      .then(setVoyages)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
+      .then((data) => {
+        setVoyages(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
       .catch((e) => {
         console.error("API error:", e);
+        setError("Could not load voyages.");
         setVoyages([]);
+        setLoading(false);
       });
   }, [searchParams]);
 
@@ -49,79 +105,103 @@ const VoyageList: React.FC = () => {
     return acc;
   }, {} as Record<string, Voyage[]>);
 
-  const sortedGroups = Object.entries(grouped).sort(
-    ([a], [b]) =>
-      (a === "Non-presidential" ? 1 : 0) - (b === "Non-presidential" ? 1 : 0)
-  );
+  const sortedGroups = Object.entries(grouped).sort(([a], [b]) => {
+    const aNP = a === "Non-presidential" ? 1 : 0;
+    const bNP = b === "Non-presidential" ? 1 : 0;
+    return aNP - bNP;
+  });
 
   return (
-    <div className="voyage-list-container">
+    <div className="px-4 sm:px-6 lg:px-8 py-6">
       {/* ----- FILTER BAR ----- */}
-      <div className="filters items-center">
-        <label>
+      <div className="flex flex-wrap items-end gap-3 mb-6 bg-white/70 p-3 rounded-xl ring-1 ring-gray-200">
+        <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={Boolean(searchParams.get("significant"))}
             onChange={(e) =>
               updateParam("significant", e.target.checked ? "1" : "")
             }
-          />{" "}
-          Significant
+          />
+          <span>Significant</span>
         </label>
-        <label>
+
+        <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={Boolean(searchParams.get("royalty"))}
             onChange={(e) =>
               updateParam("royalty", e.target.checked ? "1" : "")
             }
-          />{" "}
-          Royalty onboard
+          />
+          <span>Royalty onboard</span>
         </label>
-        <label>
-          From:{" "}
+
+        <label className="flex items-center gap-2 text-sm">
+          <span>From:</span>
           <input
             type="date"
             value={searchParams.get("date_from") || ""}
             onChange={(e) => updateParam("date_from", e.target.value)}
+            className="px-2 py-1 border rounded"
           />
         </label>
-        <label>
-          To:{" "}
+
+        <label className="flex items-center gap-2 text-sm">
+          <span>To:</span>
           <input
             type="date"
             value={searchParams.get("date_to") || ""}
             onChange={(e) => updateParam("date_to", e.target.value)}
+            className="px-2 py-1 border rounded"
           />
         </label>
 
-        {/* president dropdown */}
         <PresidentFilter />
 
-        {/* text search */}
-        <input
-          type="text"
-          value={localQ}
-          onChange={(e) => setLocalQ(e.target.value)}
-          placeholder="Keyword"
-          className="ml-2 p-1 border rounded"
-        />
-        <button
-          onClick={handleSearch}
-          className="ml-2 px-3 py-1 bg-stone-600 text-white rounded"
-        >
-          Search
-        </button>
+        <div className="flex items-center gap-2 ml-auto">
+          <input
+            type="text"
+            value={localQ}
+            onChange={(e) => setLocalQ(e.target.value)}
+            placeholder="Keyword"
+            className="px-3 py-1.5 border rounded w-48"
+          />
+          <button
+            onClick={handleSearch}
+            className="px-3 py-1.5 rounded bg-stone-700 text-white hover:bg-stone-800"
+          >
+            Search
+          </button>
+          <button
+            onClick={clearFilters}
+            className="px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200"
+          >
+            Clear
+          </button>
+        </div>
       </div>
 
+      {/* ----- STATES ----- */}
+      {loading && (
+        <div className="text-center text-gray-600 py-10">Loading voyages…</div>
+      )}
+      {!loading && error && (
+        <div className="text-center text-red-600 py-10">{error}</div>
+      )}
+      {!loading && !error && voyages.length === 0 && (
+        <div className="text-center text-gray-600 py-10">No voyages found.</div>
+      )}
+
       {/* ----- TIMELINE ----- */}
-      {voyages.length === 0 ? (
-        <p className="text-center">No voyages found.</p>
-      ) : (
+      {!loading && !error && voyages.length > 0 && (
         <div className="timeline">
           {sortedGroups.map(([header, items]) => (
-            <section key={header}>
-              <h2 className="text-xl font-semibold mb-3">
+            <section key={header} className="mb-8">
+              <h2
+                className="sticky top-0 z-10 -ml-2 pl-2 pr-3 py-2 mb-3 text-base sm:text-lg font-semibold
+                              bg-white/80 backdrop-blur rounded-r-xl ring-1 ring-gray-200 inline-flex"
+              >
                 {header === "Non-presidential"
                   ? "Before / After Presidential Use"
                   : `${header} Administration`}
@@ -136,26 +216,32 @@ const VoyageList: React.FC = () => {
                 .map((v) => (
                   <div key={v.voyage_id} className="timeline-item">
                     <div className="timeline-marker" />
-                    <div className="timeline-content">
+                    <div className="timeline-content w-full">
                       <Link
                         to={`/voyages/${v.voyage_id}`}
-                        className="voyage-card"
+                        className="block bg-white p-4 rounded-xl shadow-sm ring-1 ring-gray-200 hover:shadow-md transition"
                       >
-                        <h3>
-                          {new Date(v.start_timestamp).toLocaleDateString()} –{" "}
-                          {new Date(v.end_timestamp).toLocaleDateString()}
-                        </h3>
-                        <div className="flags">
-                          {v.significant === 1 && (
-                            <span className="flag significant">
-                              Significant
-                            </span>
-                          )}
-                          {v.royalty === 1 && (
-                            <span className="flag royalty">Royalty</span>
-                          )}
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                          <h3 className="text-sm sm:text-base font-semibold">
+                            {formatRange(v.start_timestamp, v.end_timestamp)}
+                          </h3>
+                          <div className="flex gap-2">
+                            {v.significant === 1 && <Badge>Significant</Badge>}
+                            {v.royalty === 1 && (
+                              <Badge tone="violet">Royalty</Badge>
+                            )}
+                          </div>
                         </div>
-                        <p className="info">{v.additional_info}</p>
+                        {v.additional_info && (
+                          <p className="text-sm text-gray-600 line-clamp-2">
+                            {v.additional_info}
+                          </p>
+                        )}
+                        {!v.additional_info && v.notes && (
+                          <p className="text-sm text-gray-600 line-clamp-2">
+                            {v.notes}
+                          </p>
+                        )}
                       </Link>
                     </div>
                   </div>
