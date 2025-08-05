@@ -37,21 +37,6 @@ export default function HomePage() {
     goToTimeline();
   };
 
-  /* reusable gradient heading */
-  const SectionTitle: React.FC<{ id: string; children: React.ReactNode }> = ({
-    id,
-    children,
-  }) => (
-    <h2
-      id={id}
-      className="text-6xl sm:text-7xl font-extrabold mb-8
-                 bg-gradient-to-r from-slate-400 via-sky-400 to-indigo-400
-                 bg-clip-text text-transparent"
-    >
-      {children}
-    </h2>
-  );
-
   const glass = "bg-white/20 backdrop-blur-md ring-1 ring-white/30 shadow-lg";
 
   return (
@@ -64,11 +49,11 @@ export default function HomePage() {
           style={{ backgroundImage: "url(/sequoia-homepage.jpeg)" }}
           aria-hidden="true"
         />
-        {/* indigo overlay for contrast */}
+        {/* overlay */}
         <div className="absolute inset-0 bg-indigo-900/60" aria-hidden="true" />
+
         {/* content */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full p-6 sm:p-8 text-center text-white">
-          {/* ---- HEADLINE (NB-spaces removed so it can wrap) ---- */}
           <h1 className="text-5xl sm:text-7xl font-extrabold mb-4 tracking-tight leading-tight">
             USS Sequoia Archive
           </h1>
@@ -102,25 +87,32 @@ export default function HomePage() {
               ))}
             </select>
 
-            <div className="flex justify-center gap-8">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={significant}
-                  onChange={(e) => setSignificant(e.target.checked)}
-                />
-                <span className="text-sm">Significant</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={royalty}
-                  onChange={(e) => setRoyalty(e.target.checked)}
-                />
-                <span className="text-sm">Royalty</span>
-              </label>
-            </div>
+            {/* --- MORE FILTERS DROPDOWN --- */}
+            <details className="relative">
+              <summary className="cursor-pointer mx-auto w-max text-sm px-3 py-1.5 border rounded bg-gray-100 hover:bg-gray-200 select-none">
+                More filters ▾
+              </summary>
+              <div className="absolute z-20 mt-2 w-56 bg-white rounded-lg shadow-lg ring-1 ring-gray-200 p-3 space-y-2 left-1/2 -translate-x-1/2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={significant}
+                    onChange={(e) => setSignificant(e.target.checked)}
+                  />
+                  <span>Significant&nbsp;Voyage</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={royalty}
+                    onChange={(e) => setRoyalty(e.target.checked)}
+                  />
+                  <span>Royalty&nbsp;Aboard</span>
+                </label>
+              </div>
+            </details>
 
+            {/* ACTION BUTTONS */}
             <div className="flex justify-center gap-4">
               <button
                 type="submit"
@@ -154,7 +146,6 @@ export default function HomePage() {
       </section>
 
       {/* ---- LONG-FORM CONTENT (unchanged) ---- */}
-      {/* ... everything that was already in the article stays exactly the same ... */}
     </div>
   );
 }
