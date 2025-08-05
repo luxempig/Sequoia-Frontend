@@ -1,14 +1,17 @@
 // File: src/components/VoyageDetail.tsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import MediaGallery from "./MediaGallery";
 
-interface Media {
-  source_id: number;
-  source_path: string;
-  source_description: string | null;
-  source_type: string;
-  source_origin: string | null;
-  page_num?: number | null;
+interface Voyage {
+  voyage_id: number;
+  start_timestamp: string;
+  end_timestamp: string;
+  president_name: string | null;
+  notes: string | null;
+  additional_info: string | null;
+  significant?: number;
+  royalty?: number;
 }
 
 interface Passenger {
@@ -18,125 +21,139 @@ interface Passenger {
   bio_path: string | null;
 }
 
+const formatDateTime = (iso: string) => {
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return iso;
+  }
+};
+
 export default function VoyageDetail() {
   const { id } = useParams<{ id: string }>();
+  const voyageId = Number(id);
   const navigate = useNavigate();
 
-  const [voyage, setVoyage] = useState<any>(null);
-  const [media, setMedia] = useState<Media[]>([]);
+  const [voyage, setVoyage] = useState<Voyage | null>(null);
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /** fetch JSON but turn 404 into [] so the UI never crashes */
-  const safeFetch = <T,>(url: string): Promise<T | []> =>
-    fetch(url).then((res) => (res.ok ? res.json() : []));
+  const safeFetch = async <T,>(url: string, fallback: T): Promise<T> => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return fallback;
+      return (await res.json()) as T;
+    } catch {
+      return fallback;
+    }
+  };
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/voyages/${id}`).then((r) => r.json()),
-      safeFetch<Media[]>(`/api/voyages/${id}/media`),
-      safeFetch<Passenger[]>(`/api/voyages/${id}/passengers`),
-    ])
-      .then(([v, m, p]) => {
-        setVoyage(v);
-        setMedia(Array.isArray(m) ? m : []);
-        setPassengers(Array.isArray(p) ? p : []);
-        setLoading(false);
-      })
-      .catch((e) => {
-        console.error(e);
-        setLoading(false);
-      });
-  }, [id]);
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      const [v, p] = await Promise.all([
+        safeFetch<Voyage | null>(`/api/voyages/${voyageId}`, null),
+        safeFetch<Passenger[]>(`/api/voyages/${voyageId}/passengers`, []),
+      ]);
+      if (!alive) return;
+      setVoyage(v);
+      setPassengers(p);
+      setLoading(false);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [voyageId]);
 
   if (loading) return <p className="p-4">Loading…</p>;
   if (!voyage) return <p className="p-4">Voyage not found</p>;
 
   return (
-    <div className="p-4">
+    <div className="p-4 max-w-5xl mx-auto space-y-8">
       <button
         onClick={() => navigate(-1)}
-        className="text-blue-500 hover:underline"
+        className="text-blue-600 hover:underline"
       >
         ← Back to timeline
       </button>
 
-      <h1 className="text-2xl font-semibold mt-4 mb-2">
-        Voyage {voyage.voyage_id}:{" "}
-        {new Date(voyage.start_timestamp).toLocaleString(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })}{" "}
-        –{" "}
-        {new Date(voyage.end_timestamp).toLocaleString(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })}
-      </h1>
-
-      {voyage.president_name && (
-        <p className="mb-2 text-gray-700">
-          <strong>Presidential ownership:</strong> {voyage.president_name}
-        </p>
-      )}
-
-      <p className="mb-4">
-        <strong>Notes:</strong> {voyage.notes || "—"}
-      </p>
-      <p className="mb-6">
-        <strong>Additional Info:</strong> {voyage.additional_info || "—"}
-      </p>
-
-      {/* ---------- MEDIA ---------- */}
-      <h3 className="text-xl font-semibold">Media</h3>
-      {media.length === 0 ? (
-        <p className="text-gray-600 mb-6">No media for this voyage.</p>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          {media.map((item) => (
-            <figure key={item.source_id}>
-              <img
-                src={item.source_path}
-                alt={item.source_description || "Voyage media"}
-                className="max-w-full rounded shadow"
-              />
-              <figcaption className="text-sm text-gray-600 mt-1">
-                {item.source_type} — {item.source_origin}
-                {item.page_num && ` (page ${item.page_num})`}
-                {item.source_description && `: ${item.source_description}`}
-              </figcaption>
-            </figure>
-          ))}
+      {/* Header card */}
+      <div className="bg-white rounded-2xl p-5 ring-1 ring-gray-200 shadow-sm">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h1 className="text-xl sm:text-2xl font-semibold">
+            Voyage {voyage.voyage_id}
+          </h1>
+          <div className="text-sm sm:text-base text-gray-700">
+            <strong>From</strong> {formatDateTime(voyage.start_timestamp)}{" "}
+            <strong>to</strong> {formatDateTime(voyage.end_timestamp)}
+          </div>
         </div>
-      )}
 
-      {/* ---------- PASSENGERS ---------- */}
-      <h3 className="text-xl font-semibold">Passengers</h3>
-      {passengers.length === 0 ? (
-        <p className="text-gray-600">No passengers recorded for this voyage.</p>
-      ) : (
-        <ul className="list-disc list-inside space-y-1">
-          {passengers.map((p) => (
-            <li key={p.passenger_id}>
-              <strong>{p.name}</strong>
-              {p.basic_info && <> — {p.basic_info}</>}
-              {p.bio_path && (
-                <>
-                  {" "}
-                  <a
-                    href={p.bio_path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline"
-                  >
-                    Bio
-                  </a>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+        {voyage.president_name && (
+          <p className="mt-2 text-gray-700">
+            <strong>Presidential ownership:</strong> {voyage.president_name}
+          </p>
+        )}
+
+        {(voyage.notes || voyage.additional_info) && (
+          <div className="mt-4 grid sm:grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h3 className="font-semibold mb-1">Notes</h3>
+              <p className="text-sm text-gray-700">{voyage.notes || "—"}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h3 className="font-semibold mb-1">Additional Info</h3>
+              <p className="text-sm text-gray-700">
+                {voyage.additional_info || "—"}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Media */}
+      <section className="bg-white rounded-2xl p-5 ring-1 ring-gray-200 shadow-sm">
+        <h3 className="text-lg font-semibold mb-3">Media</h3>
+        <MediaGallery voyageId={voyageId} />
+      </section>
+
+      {/* Passengers */}
+      <section className="bg-white rounded-2xl p-5 ring-1 ring-gray-200 shadow-sm">
+        <h3 className="text-lg font-semibold mb-3">Passengers</h3>
+        {passengers.length === 0 ? (
+          <p className="text-gray-600">
+            No passengers recorded for this voyage.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {passengers.map((p) => (
+              <li key={p.passenger_id} className="flex items-start gap-2">
+                <span className="mt-1">•</span>
+                <div className="text-sm">
+                  <div className="font-medium">{p.name}</div>
+                  {p.basic_info && (
+                    <div className="text-gray-700">{p.basic_info}</div>
+                  )}
+                  {p.bio_path && (
+                    <a
+                      href={p.bio_path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Bio
+                    </a>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
