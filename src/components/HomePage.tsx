@@ -82,7 +82,7 @@ export default function HomePage() {
           >
             <input
               type="text"
-              placeholder="Keyword…"
+              placeholder="Search any keyword to find associated voyages..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full p-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none"
