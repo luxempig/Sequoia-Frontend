@@ -16,24 +16,20 @@ interface Voyage {
 }
 
 const formatRange = (startISO: string, endISO: string) => {
-  try {
-    const start = new Date(startISO);
-    const end = new Date(endISO);
-    const sameDay =
-      start.toDateString() === end.toDateString() ||
-      (isNaN(end.getTime()) && !isNaN(start.getTime()));
-    return sameDay
-      ? start.toLocaleDateString()
-      : `${start.toLocaleDateString()} – ${end.toLocaleDateString()}`;
-  } catch {
-    return `${startISO} – ${endISO}`;
-  }
+  const start = new Date(startISO);
+  const end = new Date(endISO);
+  const same =
+    start.toDateString() === end.toDateString() ||
+    (isNaN(end.getTime()) && !isNaN(start.getTime()));
+  return same
+    ? start.toLocaleDateString()
+    : `${start.toLocaleDateString()} – ${end.toLocaleDateString()}`;
 };
 
 const Badge: React.FC<{
-  children: React.ReactNode;
   tone?: "amber" | "violet";
-}> = ({ children, tone = "amber" }) => {
+  children: React.ReactNode;
+}> = ({ tone = "amber", children }) => {
   const toneClass =
     tone === "amber"
       ? "bg-amber-100 text-amber-800 ring-amber-200"
@@ -47,73 +43,61 @@ const Badge: React.FC<{
   );
 };
 
-const VoyageList: React.FC = () => {
+export default function VoyageList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [voyages, setVoyages] = useState<Voyage[]>([]);
   const [localQ, setLocalQ] = useState(searchParams.get("q") || "");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // helper to patch a single URL param
-  const updateParam = (key: string, value: string) => {
+  const updateParam = (k: string, v: string) => {
     const next = new URLSearchParams(searchParams);
-    value ? next.set(key, value) : next.delete(key);
+    v ? next.set(k, v) : next.delete(k);
     setSearchParams(next);
   };
 
-  // only push text search on click
   const handleSearch = () => updateParam("q", localQ);
-
   const clearFilters = () => {
-    const keys = [
+    [
       "q",
       "significant",
       "royalty",
       "date_from",
       "date_to",
       "president_id",
-    ];
-    const next = new URLSearchParams(searchParams);
-    keys.forEach((k) => next.delete(k));
+    ].forEach((k) => searchParams.delete(k));
+    setSearchParams(searchParams);
     setLocalQ("");
-    setSearchParams(next);
   };
 
-  // fetch voyages whenever params change
   useEffect(() => {
     setLoading(true);
-    setError(null);
     const qs = searchParams.toString();
     fetch(`/api/voyages${qs ? "?" + qs : ""}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
-      .then((data) => {
-        setVoyages(Array.isArray(data) ? data : []);
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => {
+        setVoyages(Array.isArray(d) ? d : []);
         setLoading(false);
       })
-      .catch((e) => {
-        console.error("API error:", e);
-        setError("Could not load voyages.");
+      .catch(() => {
         setVoyages([]);
         setLoading(false);
       });
   }, [searchParams]);
 
-  /* ---------- group voyages by president_name ---------- */
   const grouped: Record<string, Voyage[]> = voyages.reduce((acc, v) => {
     const key = v.president_name ?? "Non-presidential";
     (acc[key] ||= []).push(v);
     return acc;
   }, {} as Record<string, Voyage[]>);
 
-  const sortedGroups = Object.entries(grouped).sort(([a], [b]) => {
-    const aNP = a === "Non-presidential" ? 1 : 0;
-    const bNP = b === "Non-presidential" ? 1 : 0;
-    return aNP - bNP;
-  });
-
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6">
-      {/* ----- FILTER BAR ----- */}
+      {/* ---- BACK TO HOME ---- */}
+      <Link to="/" className="text-blue-600 hover:underline inline-block mb-4">
+        ← Back to home
+      </Link>
+
+      {/* ---- FILTER BAR ---- */}
       <div className="flex flex-wrap items-end gap-3 mb-6 bg-white/70 p-3 rounded-xl ring-1 ring-gray-200">
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -182,21 +166,16 @@ const VoyageList: React.FC = () => {
         </div>
       </div>
 
-      {/* ----- STATES ----- */}
-      {loading && (
-        <div className="text-center text-gray-600 py-10">Loading voyages…</div>
-      )}
-      {!loading && error && (
-        <div className="text-center text-red-600 py-10">{error}</div>
-      )}
-      {!loading && !error && voyages.length === 0 && (
-        <div className="text-center text-gray-600 py-10">No voyages found.</div>
+      {/* ---- LOADING / EMPTY STATES ---- */}
+      {loading && <p className="text-center text-gray-500 py-10">Loading…</p>}
+      {!loading && voyages.length === 0 && (
+        <p className="text-center text-gray-500 py-10">No voyages found.</p>
       )}
 
-      {/* ----- TIMELINE ----- */}
-      {!loading && !error && voyages.length > 0 && (
+      {/* ---- TIMELINE ---- */}
+      {!loading && voyages.length > 0 && (
         <div className="timeline">
-          {sortedGroups.map(([header, items]) => (
+          {Object.entries(grouped).map(([header, items]) => (
             <section key={header} className="mb-8">
               <h2
                 className="sticky top-0 z-10 -ml-2 pl-2 pr-3 py-2 mb-3 text-base sm:text-lg font-semibold
@@ -215,7 +194,7 @@ const VoyageList: React.FC = () => {
                 )
                 .map((v) => (
                   <div key={v.voyage_id} className="timeline-item">
-                    <div className="timeline-marker" />
+                    {/* >>> Circles removed: no .timeline-marker div <<< */}
                     <div className="timeline-content w-full">
                       <Link
                         to={`/voyages/${v.voyage_id}`}
@@ -252,6 +231,4 @@ const VoyageList: React.FC = () => {
       )}
     </div>
   );
-};
-
-export default VoyageList;
+}
