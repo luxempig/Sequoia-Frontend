@@ -15,28 +15,28 @@ interface Voyage {
   president_name: string | null;
 }
 
-const formatRange = (startISO: string, endISO: string) => {
-  const start = new Date(startISO);
-  const end = new Date(endISO);
+const formatRange = (s: string, e: string) => {
+  const a = new Date(s);
+  const b = new Date(e);
   const same =
-    start.toDateString() === end.toDateString() ||
-    (isNaN(end.getTime()) && !isNaN(start.getTime()));
+    a.toDateString() === b.toDateString() ||
+    (isNaN(b.getTime()) && !isNaN(a.getTime()));
   return same
-    ? start.toLocaleDateString()
-    : `${start.toLocaleDateString()} – ${end.toLocaleDateString()}`;
+    ? a.toLocaleDateString()
+    : `${a.toLocaleDateString()} – ${b.toLocaleDateString()}`;
 };
 
 const Badge: React.FC<{
   tone?: "amber" | "violet";
   children: React.ReactNode;
 }> = ({ tone = "amber", children }) => {
-  const toneClass =
+  const cls =
     tone === "amber"
       ? "bg-amber-100 text-amber-800 ring-amber-200"
       : "bg-violet-100 text-violet-800 ring-violet-200";
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ring-1 ${toneClass}`}
+      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ring-1 ${cls}`}
     >
       {children}
     </span>
@@ -44,19 +44,19 @@ const Badge: React.FC<{
 };
 
 export default function VoyageList() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const [voyages, setVoyages] = useState<Voyage[]>([]);
-  const [localQ, setLocalQ] = useState(searchParams.get("q") || "");
+  const [localQ, setLocalQ] = useState(params.get("q") || "");
   const [loading, setLoading] = useState(true);
 
-  const updateParam = (k: string, v: string) => {
-    const next = new URLSearchParams(searchParams);
+  /* ---- helpers ---- */
+  const update = (k: string, v: string) => {
+    const next = new URLSearchParams(params);
     v ? next.set(k, v) : next.delete(k);
-    setSearchParams(next);
+    setParams(next);
   };
-
-  const handleSearch = () => updateParam("q", localQ);
-  const clearFilters = () => {
+  const handleSearch = () => update("q", localQ);
+  const clear = () => {
     [
       "q",
       "significant",
@@ -64,15 +64,15 @@ export default function VoyageList() {
       "date_from",
       "date_to",
       "president_id",
-    ].forEach((k) => searchParams.delete(k));
-    setSearchParams(searchParams);
+    ].forEach((k) => params.delete(k));
+    setParams(params);
     setLocalQ("");
   };
 
+  /* ---- fetch data ---- */
   useEffect(() => {
     setLoading(true);
-    const qs = searchParams.toString();
-    fetch(`/api/voyages${qs ? "?" + qs : ""}`)
+    fetch(`/api/voyages${params.toString() ? "?" + params.toString() : ""}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((d) => {
         setVoyages(Array.isArray(d) ? d : []);
@@ -82,67 +82,74 @@ export default function VoyageList() {
         setVoyages([]);
         setLoading(false);
       });
-  }, [searchParams]);
+  }, [params]);
 
+  /* ---- group by administration ---- */
   const grouped: Record<string, Voyage[]> = voyages.reduce((acc, v) => {
-    const key = v.president_name ?? "Non-presidential";
-    (acc[key] ||= []).push(v);
+    const k = v.president_name ?? "Non-presidential";
+    (acc[k] ||= []).push(v);
     return acc;
   }, {} as Record<string, Voyage[]>);
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6">
-      {/* ---- BACK TO HOME ---- */}
+      {/* BACK LINK */}
       <Link to="/" className="text-blue-600 hover:underline inline-block mb-4">
         ← Back to home
       </Link>
 
-      {/* ---- FILTER BAR ---- */}
+      {/* FILTER BAR */}
       <div className="flex flex-wrap items-end gap-3 mb-6 bg-white/70 p-3 rounded-xl ring-1 ring-gray-200">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={Boolean(searchParams.get("significant"))}
-            onChange={(e) =>
-              updateParam("significant", e.target.checked ? "1" : "")
-            }
-          />
-          <span>Significant</span>
-        </label>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={Boolean(searchParams.get("royalty"))}
-            onChange={(e) =>
-              updateParam("royalty", e.target.checked ? "1" : "")
-            }
-          />
-          <span>Royalty onboard</span>
-        </label>
-
+        {/* Date & President */}
         <label className="flex items-center gap-2 text-sm">
           <span>From:</span>
           <input
             type="date"
-            value={searchParams.get("date_from") || ""}
-            onChange={(e) => updateParam("date_from", e.target.value)}
+            value={params.get("date_from") || ""}
+            onChange={(e) => update("date_from", e.target.value)}
             className="px-2 py-1 border rounded"
           />
         </label>
-
         <label className="flex items-center gap-2 text-sm">
           <span>To:</span>
           <input
             type="date"
-            value={searchParams.get("date_to") || ""}
-            onChange={(e) => updateParam("date_to", e.target.value)}
+            value={params.get("date_to") || ""}
+            onChange={(e) => update("date_to", e.target.value)}
             className="px-2 py-1 border rounded"
           />
         </label>
 
         <PresidentFilter />
 
+        {/* MORE FILTERS DROPDOWN */}
+        <details className="relative">
+          <summary className="cursor-pointer text-sm px-3 py-1.5 border rounded bg-gray-100 hover:bg-gray-200 select-none">
+            More filters ▾
+          </summary>
+          <div className="absolute z-20 mt-2 w-56 bg-white rounded-lg shadow-lg ring-1 ring-gray-200 p-3 space-y-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(params.get("significant"))}
+                onChange={(e) =>
+                  update("significant", e.target.checked ? "1" : "")
+                }
+              />
+              <span>Significant&nbsp;Voyage</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(params.get("royalty"))}
+                onChange={(e) => update("royalty", e.target.checked ? "1" : "")}
+              />
+              <span>Royalty&nbsp;Aboard</span>
+            </label>
+          </div>
+        </details>
+
+        {/* KEYWORD + BUTTONS */}
         <div className="flex items-center gap-2 ml-auto">
           <input
             type="text"
@@ -158,7 +165,7 @@ export default function VoyageList() {
             Search
           </button>
           <button
-            onClick={clearFilters}
+            onClick={clear}
             className="px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200"
           >
             Clear
@@ -166,24 +173,24 @@ export default function VoyageList() {
         </div>
       </div>
 
-      {/* ---- LOADING / EMPTY STATES ---- */}
+      {/* LOADING / EMPTY */}
       {loading && <p className="text-center text-gray-500 py-10">Loading…</p>}
       {!loading && voyages.length === 0 && (
         <p className="text-center text-gray-500 py-10">No voyages found.</p>
       )}
 
-      {/* ---- TIMELINE ---- */}
+      {/* TIMELINE */}
       {!loading && voyages.length > 0 && (
         <div className="timeline">
-          {Object.entries(grouped).map(([header, items]) => (
-            <section key={header} className="mb-8">
+          {Object.entries(grouped).map(([hdr, items]) => (
+            <section key={hdr} className="mb-8">
               <h2
                 className="sticky top-0 z-10 -ml-2 pl-2 pr-3 py-2 mb-3 text-base sm:text-lg font-semibold
                               bg-white/80 backdrop-blur rounded-r-xl ring-1 ring-gray-200 inline-flex"
               >
-                {header === "Non-presidential"
+                {hdr === "Non-presidential"
                   ? "Before / After Presidential Use"
-                  : `${header} Administration`}
+                  : `${hdr} Administration`}
               </h2>
 
               {items
@@ -194,7 +201,6 @@ export default function VoyageList() {
                 )
                 .map((v) => (
                   <div key={v.voyage_id} className="timeline-item">
-                    {/* >>> Circles removed: no .timeline-marker div <<< */}
                     <div className="timeline-content w-full">
                       <Link
                         to={`/voyages/${v.voyage_id}`}
