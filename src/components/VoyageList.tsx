@@ -1,6 +1,6 @@
+// File: src/components/VoyageList.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import PresidentFilter from "./PresidentFilter";
 
 interface Voyage {
   voyage_id: number;
@@ -14,7 +14,13 @@ interface Voyage {
   president_name: string | null;
 }
 
-const fmt = (s: string, e: string) => {
+interface President {
+  president_id: number;
+  full_name: string;
+}
+
+/* ---------- small helpers ---------- */
+const fmtRange = (s: string, e: string) => {
   const a = new Date(s),
     b = new Date(e);
   const same = a.toDateString() === b.toDateString() || isNaN(b.getTime());
@@ -42,42 +48,59 @@ const Badge: React.FC<{
 
 export default function VoyageList() {
   const [params, setParams] = useSearchParams();
-  const init = (k: string) => params.get(k) || "";
-  const [q, setQ] = useState(init("q"));
-  const [dateFrom, setDF] = useState(init("date_from"));
-  const [dateTo, setDT] = useState(init("date_to"));
-  const [pres, setPres] = useState(init("president_id"));
-  const [sig, setSig] = useState(params.get("significant") === "1");
-  const [roy, setRoy] = useState(params.get("royalty") === "1");
 
+  /* ---- local filter state (initialised from URL) ---- */
+  const [q, setQ] = useState(() => params.get("q") || "");
+  const [dateFrom, setDateFrom] = useState(() => params.get("date_from") || "");
+  const [dateTo, setDateTo] = useState(() => params.get("date_to") || "");
+  const [presidentId, setPresidentId] = useState(
+    () => params.get("president_id") || ""
+  );
+  const [significant, setSignificant] = useState(
+    params.get("significant") === "1"
+  );
+  const [royalty, setRoyalty] = useState(params.get("royalty") === "1");
+
+  /* ---- data ---- */
   const [voyages, setVoyages] = useState<Voyage[]>([]);
+  const [presidents, setPresidents] = useState<President[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* re-sync local state when URL changes (back/forward) */
-  useEffect(() => {
-    setQ(init("q"));
-    setDF(init("date_from"));
-    setDT(init("date_to"));
-    setPres(init("president_id"));
-    setSig(params.get("significant") === "1");
-    setRoy(params.get("royalty") === "1");
-  }, [params]);
-
-  /* dropdown open handling */
+  /* ---- “More filters” dropdown state ---- */
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+
+  /* fetch presidents once */
+  useEffect(() => {
+    fetch("/api/presidents")
+      .then((r) => r.json())
+      .then(setPresidents)
+      .catch(console.error);
+  }, []);
+
+  /* close dropdown on outside click */
   useEffect(() => {
     if (!moreOpen) return;
-    const onClick = (e: MouseEvent) => {
+    const handler = (e: MouseEvent) => {
       if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
         setMoreOpen(false);
       }
     };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [moreOpen]);
 
-  /* fetch when URL params change */
+  /* keep local state in sync if user navigates back/forward */
+  useEffect(() => {
+    setQ(params.get("q") || "");
+    setDateFrom(params.get("date_from") || "");
+    setDateTo(params.get("date_to") || "");
+    setPresidentId(params.get("president_id") || "");
+    setSignificant(params.get("significant") === "1");
+    setRoyalty(params.get("royalty") === "1");
+  }, [params]);
+
+  /* fetch voyages whenever URL params change */
   useEffect(() => {
     setLoading(true);
     fetch(`/api/voyages${params.toString() ? "?" + params.toString() : ""}`)
@@ -92,63 +115,56 @@ export default function VoyageList() {
       });
   }, [params]);
 
-  const submit = (e?: React.FormEvent) => {
+  /* ---------- handlers ---------- */
+  const applyFilters = (e?: React.FormEvent) => {
     e?.preventDefault();
     const p = new URLSearchParams();
     if (q) p.set("q", q);
-    if (sig) p.set("significant", "1");
-    if (roy) p.set("royalty", "1");
+    if (significant) p.set("significant", "1");
+    if (royalty) p.set("royalty", "1");
     if (dateFrom) p.set("date_from", dateFrom);
     if (dateTo) p.set("date_to", dateTo);
-    if (pres) p.set("president_id", pres);
+    if (presidentId) p.set("president_id", presidentId);
     setParams(p);
     setMoreOpen(false);
   };
 
-  const clear = () => {
+  const clearFilters = () => {
     setQ("");
-    setDF("");
-    setDT("");
-    setPres("");
-    setSig(false);
-    setRoy(false);
+    setDateFrom("");
+    setDateTo("");
+    setPresidentId("");
+    setSignificant(false);
+    setRoyalty(false);
     setParams(new URLSearchParams());
   };
 
-  /* group by administration */
-  // ── old (lines 118-123) ──────────────────────────────
-  // const grouped: Record<string, Voyage[]> = voyages.reduce((a, v) => {
-  //   const k = v.president_name ?? "Non-presidential";
-  //   (a[k] ||= []).push(v);
-  //   return a;
-  // }, {});
-
-  // ── replace with ↓ ───────────────────────────────────
+  /* ---------- group voyages by administration ---------- */
   const grouped = voyages.reduce<Record<string, Voyage[]>>((acc, v) => {
-    const k = v.president_name ?? "Non-presidential";
-    if (!acc[k]) acc[k] = [];
-    acc[k].push(v);
+    const key = v.president_name ?? "Non-presidential";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(v);
     return acc;
   }, {});
 
+  /* ---------- render ---------- */
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6">
       <Link to="/" className="text-blue-600 hover:underline inline-block mb-4">
         ← Back to home
       </Link>
 
-      {/* ---------- FILTER BAR ---------- */}
+      {/* FILTER BAR */}
       <form
-        onSubmit={submit}
+        onSubmit={applyFilters}
         className="flex flex-wrap items-end gap-3 mb-6 bg-white/70 p-3 rounded-xl ring-1 ring-gray-200"
       >
-        {/* date & president */}
         <label className="flex items-center gap-2 text-sm">
           <span>From:</span>
           <input
             type="date"
             value={dateFrom}
-            onChange={(e) => setDF(e.target.value)}
+            onChange={(e) => setDateFrom(e.target.value)}
             className="px-2 py-1 border rounded"
           />
         </label>
@@ -157,14 +173,29 @@ export default function VoyageList() {
           <input
             type="date"
             value={dateTo}
-            onChange={(e) => setDT(e.target.value)}
+            onChange={(e) => setDateTo(e.target.value)}
             className="px-2 py-1 border rounded"
           />
         </label>
 
-        <PresidentFilter /* uses URL param so we proxy changes */ />
+        {/* President dropdown */}
+        <label className="flex items-center gap-2 text-sm">
+          <span>President:</span>
+          <select
+            value={presidentId}
+            onChange={(e) => setPresidentId(e.target.value)}
+            className="px-2 py-1 border rounded"
+          >
+            <option value="">All</option>
+            {presidents.map((p) => (
+              <option key={p.president_id} value={p.president_id}>
+                {p.full_name}
+              </option>
+            ))}
+          </select>
+        </label>
 
-        {/* --- More Filters dropdown --- */}
+        {/* More filters dropdown */}
         <div className="relative" ref={moreRef}>
           <button
             type="button"
@@ -179,16 +210,16 @@ export default function VoyageList() {
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
-                  checked={sig}
-                  onChange={(e) => setSig(e.target.checked)}
+                  checked={significant}
+                  onChange={(e) => setSignificant(e.target.checked)}
                 />
                 <span>Significant Voyage</span>
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
-                  checked={roy}
-                  onChange={(e) => setRoy(e.target.checked)}
+                  checked={royalty}
+                  onChange={(e) => setRoyalty(e.target.checked)}
                 />
                 <span>Royalty Aboard</span>
               </label>
@@ -196,7 +227,7 @@ export default function VoyageList() {
           )}
         </div>
 
-        {/* keyword + buttons */}
+        {/* Keyword + buttons */}
         <div className="flex items-center gap-2 ml-auto">
           <input
             value={q}
@@ -212,7 +243,7 @@ export default function VoyageList() {
           </button>
           <button
             type="button"
-            onClick={clear}
+            onClick={clearFilters}
             className="px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200"
           >
             Clear
@@ -220,7 +251,7 @@ export default function VoyageList() {
         </div>
       </form>
 
-      {/* ---------- STATES / TIMELINE ---------- */}
+      {/* STATES / TIMELINE */}
       {loading && <p className="text-center text-gray-500 py-10">Loading…</p>}
       {!loading && voyages.length === 0 && (
         <p className="text-center text-gray-500 py-10">No voyages found.</p>
@@ -228,16 +259,17 @@ export default function VoyageList() {
 
       {!loading && voyages.length > 0 && (
         <div className="timeline">
-          {Object.entries(grouped).map(([hdr, items]) => (
-            <section key={hdr} className="mb-8">
+          {Object.entries(grouped).map(([header, items]) => (
+            <section key={header} className="mb-8">
               <h2
                 className="sticky top-0 z-10 -ml-2 pl-2 pr-3 py-2 mb-3 text-base sm:text-lg font-semibold
                               bg-white/80 backdrop-blur rounded-r-xl ring-1 ring-gray-200 inline-flex"
               >
-                {hdr === "Non-presidential"
+                {header === "Non-presidential"
                   ? "Before / After Presidential Use"
-                  : `${hdr} Administration`}
+                  : `${header} Administration`}
               </h2>
+
               {items
                 .sort(
                   (a, b) =>
@@ -252,7 +284,7 @@ export default function VoyageList() {
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                           <h3 className="text-sm sm:text-base font-semibold">
-                            {fmt(v.start_timestamp, v.end_timestamp)}
+                            {fmtRange(v.start_timestamp, v.end_timestamp)}
                           </h3>
                           <div className="flex gap-2">
                             {v.significant === 1 && <Badge>Significant</Badge>}
