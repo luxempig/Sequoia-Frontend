@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import PresidentFilter from "./PresidentFilter";
-import "./VoyageList.css";
 
 interface Voyage {
   voyage_id: number;
@@ -51,7 +50,8 @@ const VoyageList: React.FC = () => {
   }, {} as Record<string, Voyage[]>);
 
   const sortedGroups = Object.entries(grouped).sort(
-    ([a], [b]) => (a === "Non-presidential" ? 1 : 0) - (b === "Non-presidential" ? 1 : 0)
+    ([a], [b]) =>
+      (a === "Non-presidential" ? 1 : 0) - (b === "Non-presidential" ? 1 : 0)
   );
 
   return (
@@ -62,7 +62,9 @@ const VoyageList: React.FC = () => {
           <input
             type="checkbox"
             checked={Boolean(searchParams.get("significant"))}
-            onChange={(e) => updateParam("significant", e.target.checked ? "1" : "")}
+            onChange={(e) =>
+              updateParam("significant", e.target.checked ? "1" : "")
+            }
           />{" "}
           Significant
         </label>
@@ -70,7 +72,9 @@ const VoyageList: React.FC = () => {
           <input
             type="checkbox"
             checked={Boolean(searchParams.get("royalty"))}
-            onChange={(e) => updateParam("royalty", e.target.checked ? "1" : "")}
+            onChange={(e) =>
+              updateParam("royalty", e.target.checked ? "1" : "")
+            }
           />{" "}
           Royalty onboard
         </label>
@@ -102,7 +106,10 @@ const VoyageList: React.FC = () => {
           placeholder="Keyword"
           className="ml-2 p-1 border rounded"
         />
-        <button onClick={handleSearch} className="ml-2 px-3 py-1 bg-stone-600 text-white rounded">
+        <button
+          onClick={handleSearch}
+          className="ml-2 px-3 py-1 bg-stone-600 text-white rounded"
+        >
           Search
         </button>
       </div>
@@ -115,25 +122,38 @@ const VoyageList: React.FC = () => {
           {sortedGroups.map(([header, items]) => (
             <section key={header}>
               <h2 className="text-xl font-semibold mb-3">
-                {header === "Non-presidential" ? "Before / After Presidential Use" : `${header} Administration`}
+                {header === "Non-presidential"
+                  ? "Before / After Presidential Use"
+                  : `${header} Administration`}
               </h2>
 
               {items
                 .sort(
-                  (a, b) => new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime()
+                  (a, b) =>
+                    new Date(a.start_timestamp).getTime() -
+                    new Date(b.start_timestamp).getTime()
                 )
                 .map((v) => (
                   <div key={v.voyage_id} className="timeline-item">
                     <div className="timeline-marker" />
                     <div className="timeline-content">
-                      <Link to={`/voyages/${v.voyage_id}`} className="voyage-card">
+                      <Link
+                        to={`/voyages/${v.voyage_id}`}
+                        className="voyage-card"
+                      >
                         <h3>
                           {new Date(v.start_timestamp).toLocaleDateString()} –{" "}
                           {new Date(v.end_timestamp).toLocaleDateString()}
                         </h3>
                         <div className="flags">
-                          {v.significant === 1 && <span className="flag significant">Significant</span>}
-                          {v.royalty === 1 && <span className="flag royalty">Royalty</span>}
+                          {v.significant === 1 && (
+                            <span className="flag significant">
+                              Significant
+                            </span>
+                          )}
+                          {v.royalty === 1 && (
+                            <span className="flag royalty">Royalty</span>
+                          )}
                         </div>
                         <p className="info">{v.additional_info}</p>
                       </Link>
