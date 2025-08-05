@@ -116,10 +116,19 @@ export default function VoyageList() {
   };
 
   /* group by administration */
-  const grouped: Record<string, Voyage[]> = voyages.reduce((a, v) => {
+  // ── old (lines 118-123) ──────────────────────────────
+  // const grouped: Record<string, Voyage[]> = voyages.reduce((a, v) => {
+  //   const k = v.president_name ?? "Non-presidential";
+  //   (a[k] ||= []).push(v);
+  //   return a;
+  // }, {});
+
+  // ── replace with ↓ ───────────────────────────────────
+  const grouped = voyages.reduce<Record<string, Voyage[]>>((acc, v) => {
     const k = v.president_name ?? "Non-presidential";
-    (a[k] ||= []).push(v);
-    return a;
+    if (!acc[k]) acc[k] = [];
+    acc[k].push(v);
+    return acc;
   }, {});
 
   return (
