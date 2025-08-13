@@ -1,5 +1,6 @@
 // File: src/components/MediaGallery.tsx
 import React, { useState, useEffect } from "react";
+import { api } from "../api";
 
 type RawA = {
   id: number;
@@ -69,8 +70,8 @@ const MediaGallery: React.FC<{ voyageId: number }> = ({ voyageId }) => {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/voyages/${voyageId}/media`)
-      .then((res) => (res.ok ? res.json() : []))
+    api
+      .getVoyageMedia(voyageId)
       .then((data) => {
         const arr = Array.isArray(data) ? data : [];
         setMedia(arr.map(toMedia));
