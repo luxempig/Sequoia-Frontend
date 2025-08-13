@@ -2,7 +2,7 @@
 import { api } from "../api";
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import MediaGallery from "./MediaGallery";
+import MediaGallery from "./MediaGallery"; // <-- default import (no braces)
 
 interface Voyage {
   voyage_id: number;

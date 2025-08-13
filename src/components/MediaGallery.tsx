@@ -1,21 +1,7 @@
 // File: src/components/MediaGallery.tsx
 import React, { useState, useEffect } from "react";
 import { api } from "../api";
-
-type RawA = {
-  id: number;
-  thumbnail_url?: string;
-  caption?: string;
-  url?: string;
-};
-type RawB = {
-  source_id: number;
-  source_path: string;
-  source_description: string | null;
-  source_type: string;
-  source_origin: string | null;
-  page_num?: number | null;
-};
+import { MediaSource } from "../types";
 
 type MediaItem = {
   id: number;
@@ -27,41 +13,28 @@ type MediaItem = {
 };
 
 const looksLikeImage = (s?: string | null) =>
-  !!s && /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(s);
+  !!s && /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(s || "");
 
-const toMedia = (raw: RawA | RawB): MediaItem => {
-  // Heuristic: distinguish shapes
-  if ("source_id" in raw) {
-    const full = raw.source_path;
-    const isImg = looksLikeImage(full);
-    const captionBits = [
-      raw.source_type,
-      raw.source_origin ? `— ${raw.source_origin}` : "",
-      raw.page_num ? ` (p. ${raw.page_num})` : "",
-      raw.source_description ? `: ${raw.source_description}` : "",
-    ]
-      .join("")
-      .trim();
+const toMedia = (raw: MediaSource): MediaItem => {
+  const full = raw.source_path;
+  const isImg = looksLikeImage(full);
+  const captionBits = [
+    raw.source_type,
+    raw.source_origin ? `— ${raw.source_origin}` : "",
+    raw.page_num ? ` (p. ${raw.page_num})` : "",
+    raw.source_description ? `: ${raw.source_description}` : "",
+  ]
+    .join("")
+    .trim();
 
-    return {
-      id: raw.source_id,
-      thumbUrl: isImg ? full : null,
-      fullUrl: isImg ? full : undefined,
-      caption: captionBits || undefined,
-      isImage: isImg,
-      kind: raw.source_type,
-    };
-  } else {
-    const full = raw.url ?? raw.thumbnail_url ?? null;
-    const isImg = looksLikeImage(full ?? undefined);
-    return {
-      id: raw.id,
-      thumbUrl: raw.thumbnail_url ?? (isImg ? full : null),
-      fullUrl: isImg ? full ?? undefined : undefined,
-      caption: raw.caption,
-      isImage: isImg,
-    };
-  }
+  return {
+    id: raw.source_id,
+    thumbUrl: isImg ? full : null,
+    fullUrl: isImg ? full : undefined,
+    caption: captionBits || undefined,
+    isImage: isImg,
+    kind: raw.source_type,
+  };
 };
 
 const MediaGallery: React.FC<{ voyageId: number }> = ({ voyageId }) => {
@@ -99,14 +72,13 @@ const MediaGallery: React.FC<{ voyageId: number }> = ({ voyageId }) => {
               key={m.id}
               className="rounded overflow-hidden bg-white ring-1 ring-gray-200 shadow-sm"
             >
-              {/* eslint-disable-next-line jsx-a11y/alt-text */}
               <img
                 src={m.thumbUrl!}
+                alt={m.caption || "Voyage media"}
                 loading="lazy"
                 decoding="async"
                 className="w-full h-40 object-cover"
                 onError={(e) => {
-                  // graceful fallback: hide broken image and show a placeholder
                   const el = e.currentTarget;
                   el.style.display = "none";
                   const parent = el.parentElement;
