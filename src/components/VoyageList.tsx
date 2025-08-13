@@ -1,4 +1,5 @@
 // src/components/VoyageList.tsx
+import { api } from "../api";
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -96,10 +97,14 @@ export default function VoyageList() {
   /* fetch voyages when URL params change */
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/voyages${params.toString() ? "?" + params : ""}`)
-      .then((r) => (r.ok ? r.json() : []))
+    api
+      .listVoyages(params)
       .then((d) => {
-        setVoyages(Array.isArray(d) ? d : []);
+        const normalize = (v: any): Voyage => ({
+          ...v,
+          end_timestamp: v.end_timestamp ?? "",
+        });
+        setVoyages(Array.isArray(d) ? d.map(normalize) : []);
         setLoading(false);
       })
       .catch(() => {

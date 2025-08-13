@@ -1,4 +1,5 @@
 // src/components/HomePage.tsx
+import { api } from "../api";
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -20,10 +21,19 @@ export default function HomePage() {
 
   /* fetch presidents once */
   useEffect(() => {
-    fetch("/api/presidents")
-      .then((r) => r.json())
-      .then(setList)
-      .catch(console.error);
+    let alive = true;
+    (async () => {
+      try {
+        const list = await api.listPresidents();
+        if (!alive) return;
+        setList(list);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
   /* close dropdown on outside click */

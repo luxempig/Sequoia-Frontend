@@ -1,17 +1,18 @@
 // File: src/components/VoyageDetail.tsx
+import { api } from "../api";
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MediaGallery from "./MediaGallery";
 
 interface Voyage {
   voyage_id: number;
-  start_timestamp: string;
-  end_timestamp: string;
-  president_name: string | null;
+  start_timestamp: string | null;
+  end_timestamp: string | null;
+  president_name?: string | null;
   notes: string | null;
   additional_info: string | null;
-  significant?: number;
-  royalty?: number;
+  significant?: number | boolean;
+  royalty?: number | boolean;
 }
 
 interface Passenger {
@@ -21,7 +22,8 @@ interface Passenger {
   bio_path: string | null;
 }
 
-const formatDateTime = (iso: string) => {
+const formatDateTime = (iso: string | null) => {
+  if (!iso) return "—";
   try {
     return new Date(iso).toLocaleString(undefined, {
       dateStyle: "medium",
@@ -51,18 +53,22 @@ export default function VoyageDetail() {
     }
   };
 
+  // ...
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const [v, p] = await Promise.all([
-        safeFetch<Voyage | null>(`/api/voyages/${voyageId}`, null),
-        safeFetch<Passenger[]>(`/api/voyages/${voyageId}/passengers`, []),
-      ]);
-      if (!alive) return;
-      setVoyage(v);
-      setPassengers(p);
-      setLoading(false);
+      try {
+        const [v, p] = await Promise.all([
+          api.getVoyage(voyageId).catch(() => null),
+          api.getVoyagePassengers(voyageId).catch(() => []),
+        ]);
+        if (!alive) return;
+        setVoyage(v);
+        setPassengers(p);
+      } finally {
+        if (alive) setLoading(false);
+      }
     })();
     return () => {
       alive = false;
