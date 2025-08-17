@@ -1,27 +1,15 @@
-// File: src/components/MediaGallery.tsx
+// src/components/MediaGallery.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { MediaSource } from "../types";
-import { looksLikeImage } from "../utils/media";
+import { looksLikeImage, looksLikeVideo } from "../utils/media";
 
-/** Build a nice caption line from a MediaSource row */
-function captionOf(m: MediaSource): string | undefined {
-  const parts = [
-    m.source_type,
-    m.source_origin ? ` — ${m.source_origin}` : "",
-    m.page_num ? ` (p. ${m.page_num})` : "",
-    m.source_description ? `: ${m.source_description}` : "",
-  ];
-  const s = parts.join("").trim();
-  return s || undefined;
-}
-
-/** Lightweight image lightbox */
-const Lightbox: React.FC<{
-  src: string;
-  alt?: string;
-  onClose: () => void;
-}> = ({ src, alt, onClose }) => {
+/** Simple lightbox for images */
+const Lightbox: React.FC<{ src: string; alt?: string; onClose: () => void }> = ({
+  src,
+  alt,
+  onClose,
+}) => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
@@ -42,7 +30,7 @@ const Lightbox: React.FC<{
         <button
           onClick={onClose}
           className="absolute -top-3 -right-3 bg-white text-gray-800 rounded-full w-8 h-8 shadow"
-          aria-label="Close image viewer"
+          aria-label="Close"
         >
           ✕
         </button>
@@ -56,128 +44,164 @@ const Lightbox: React.FC<{
   );
 };
 
-type GalleryItem = {
+type Tile = {
   id: number;
+  kind: "image" | "video" | "other";
   url: string;
   caption?: string;
-  isImage: boolean;
-  page?: number | null;
+};
+
+const toTile = (m: MediaSource): Tile => {
+  const caption = [
+    m.source_type,
+    m.source_origin ? ` — ${m.source_origin}` : "",
+    m.page_num ? ` (p. ${m.page_num})` : "",
+    m.source_description ? `: ${m.source_description}` : "",
+  ]
+    .join("")
+    .trim();
+
+  if (looksLikeImage(m.source_path)) {
+    return { id: m.source_id, kind: "image", url: m.source_path, caption };
+  }
+  if (looksLikeVideo(m.source_path)) {
+    return { id: m.source_id, kind: "video", url: m.source_path, caption };
+  }
+  return { id: m.source_id, kind: "other", url: m.source_path, caption };
 };
 
 const MediaGallery: React.FC<{ voyageId: number }> = ({ voyageId }) => {
   const [raw, setRaw] = useState<MediaSource[]>([]);
   const [loading, setLoading] = useState(true);
-  const [broken, setBroken] = useState<Set<number>>(new Set());
-  const [lightbox, setLightbox] = useState<{ src: string; alt?: string } | null>(null);
+  const [openSrc, setOpenSrc] = useState<string | null>(null);
+  const tiles = useMemo(() => raw.map(toTile), [raw]);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    setBroken(new Set());
-    setLightbox(null);
-
     api
       .getVoyageMedia(voyageId)
-      .then((rows) => {
-        if (!alive) return;
-        setRaw(Array.isArray(rows) ? rows : []);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setRaw([]);
-      })
+      .then((data) => alive && setRaw(Array.isArray(data) ? data : []))
       .finally(() => alive && setLoading(false));
-
     return () => {
       alive = false;
     };
   }, [voyageId]);
 
-  const items: GalleryItem[] = useMemo(() => {
-    return raw
-      .map((m) => ({
-        id: m.source_id,
-        url: m.source_path,
-        caption: captionOf(m),
-        isImage: looksLikeImage(m.source_path),
-        page: m.page_num ?? null,
-      }))
-      // Put page-numbered items in reading order; otherwise stable
-      .sort((a, b) => (a.page ?? 1e9) - (b.page ?? 1e9));
-  }, [raw]);
-
   if (loading) return <p className="text-gray-600">Loading media…</p>;
-  if (items.length === 0) return <p className="text-gray-600">No media for this voyage.</p>;
+  if (tiles.length === 0) return <p className="text-gray-600">No media.</p>;
 
   return (
     <div className="space-y-6">
-      {/* IMAGE GRID — each image falls back to a plain link if it fails to load */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {items.map((it) => {
-          const failed = broken.has(it.id);
-          // If it *should* be an image and hasn't failed, try to show it
-          if (it.isImage && !failed) {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {tiles.map((t) => {
+          if (t.kind === "image") {
             return (
               <figure
-                key={it.id}
+                key={t.id}
                 className="rounded overflow-hidden bg-white ring-1 ring-gray-200 shadow-sm"
               >
-                <img
-                  src={it.url}
-                  alt={it.caption || "Voyage media"}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-40 object-cover"
-                  onClick={() => setLightbox({ src: it.url, alt: it.caption })}
-                  onError={() =>
-                    setBroken((prev) => new Set(prev).add(it.id))
-                  }
-                  style={{ cursor: "zoom-in" }}
-                />
+                <button
+                  type="button"
+                  onClick={() => setOpenSrc(t.url)}
+                  className="block w-full h-48 bg-gray-50"
+                  title={t.caption || "Open image"}
+                >
+                  <img
+                    src={t.url}
+                    alt={t.caption || "Voyage image"}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Hide the broken image; link below remains
+                      e.currentTarget.style.display = "none";
+                    }}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </button>
                 <figcaption className="p-2 text-xs text-gray-700">
-                  {it.caption}
-                  {" "}
+                  <div className="line-clamp-3">{t.caption || "Image"}</div>
                   <a
-                    href={it.url}
+                    href={t.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline"
                   >
-                    (open)
+                    Open original
                   </a>
                 </figcaption>
               </figure>
             );
           }
 
-          // Otherwise: show a neat "open media" card (works for docs, videos, or failed images)
+          if (t.kind === "video") {
+            return (
+              <figure
+                key={t.id}
+                className="rounded overflow-hidden bg-white ring-1 ring-gray-200 shadow-sm"
+              >
+                <video
+                  className="w-full h-48 bg-black"
+                  controls
+                  preload="metadata"
+                  onError={(e) => {
+                    // Replace video element with a simple link fallback
+                    const parent = e.currentTarget.parentElement;
+                    if (!parent) return;
+                    e.currentTarget.style.display = "none";
+                    const div = document.createElement("div");
+                    div.className =
+                      "w-full h-48 flex items-center justify-center bg-gray-50 text-gray-600 text-sm";
+                    div.innerHTML = `<a href="${t.url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">Open video</a>`;
+                    parent.insertBefore(div, parent.firstChild);
+                  }}
+                >
+                  <source src={t.url} />
+                </video>
+                <figcaption className="p-2 text-xs text-gray-700">
+                  <div className="line-clamp-3">{t.caption || "Video"}</div>
+                  <a
+                    href={t.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Open original
+                  </a>
+                </figcaption>
+              </figure>
+            );
+          }
+
+          // OTHER (PDFs, docs, etc.) – show a tidy card with a link
           return (
-            <a
-              key={it.id}
-              href={it.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-start gap-2 p-3 rounded-md bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition"
-              title={it.caption || "Open media"}
+            <figure
+              key={t.id}
+              className="rounded overflow-hidden bg-white ring-1 ring-gray-200 shadow-sm p-4 flex items-start gap-3"
             >
-              <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full ring-1 ring-gray-300">
+              <div className="shrink-0 w-10 h-10 rounded bg-gray-100 flex items-center justify-center">
                 📄
-              </span>
-              <div className="text-xs">
-                <div className="font-medium text-gray-900">Open media</div>
-                {it.caption && <div className="text-gray-600">{it.caption}</div>}
               </div>
-            </a>
+              <figcaption className="text-sm">
+                <div className="text-gray-800">
+                  {t.caption || "Document / External media"}
+                </div>
+                <a
+                  href={t.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  Open
+                </a>
+              </figcaption>
+            </figure>
           );
         })}
       </div>
 
-      {lightbox && (
-        <Lightbox
-          src={lightbox.src}
-          alt={lightbox.alt}
-          onClose={() => setLightbox(null)}
-        />
+      {openSrc && (
+        <Lightbox src={openSrc} alt="Voyage media" onClose={() => setOpenSrc(null)} />
       )}
     </div>
   );
