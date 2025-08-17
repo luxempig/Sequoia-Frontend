@@ -2,6 +2,7 @@
 import { api } from "../api";
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import VoyageCard from "./VoyageCard";
 
 /* ─── types ─────────────────────────────────────────── */
 interface Voyage {
@@ -10,8 +11,8 @@ interface Voyage {
   end_timestamp: string;
   additional_info: string;
   notes: string;
-  significant: number;
-  royalty: number;
+  significant: number | boolean;
+  royalty: number | boolean;
   president_id: number | null;
   president_name: string | null;
 }
@@ -21,13 +22,6 @@ interface President {
 }
 
 /* ─── helpers ───────────────────────────────────────── */
-const fmtRange = (s: string, e: string) => {
-  const a = new Date(s),
-    b = new Date(e);
-  return a.toDateString() === b.toDateString() || isNaN(b.getTime())
-    ? a.toLocaleDateString()
-    : `${a.toLocaleDateString()} – ${b.toLocaleDateString()}`;
-};
 const Badge: React.FC<{
   tone?: "amber" | "violet";
   children: React.ReactNode;
@@ -285,31 +279,7 @@ export default function VoyageList() {
                     +new Date(a.start_timestamp) - +new Date(b.start_timestamp)
                 )
                 .map((v) => (
-                  <div key={v.voyage_id} className="timeline-item">
-                    <div className="timeline-content w-full">
-                      <Link
-                        to={`/voyages/${v.voyage_id}`}
-                        className="block bg-white p-4 rounded-xl shadow-sm ring-1 ring-gray-200 hover:shadow-md transition"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                          <h3 className="text-sm sm:text-base font-semibold">
-                            {fmtRange(v.start_timestamp, v.end_timestamp)}
-                          </h3>
-                          <div className="flex gap-2">
-                            {v.significant === 1 && <Badge>Significant</Badge>}
-                            {v.royalty === 1 && (
-                              <Badge tone="violet">Royalty</Badge>
-                            )}
-                          </div>
-                        </div>
-                        {(v.additional_info || v.notes) && (
-                          <p className="text-sm text-gray-600 line-clamp-2">
-                            {v.additional_info || v.notes}
-                          </p>
-                        )}
-                      </Link>
-                    </div>
-                  </div>
+                  <VoyageCard key={v.voyage_id} voyage={v} />
                 ))}
             </section>
           ))}
