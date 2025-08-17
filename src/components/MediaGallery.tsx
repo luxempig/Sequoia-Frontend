@@ -122,7 +122,6 @@ const MediaGallery: React.FC<{ voyageId: number }> = ({ voyageId }) => {
                 key={it.id}
                 className="rounded overflow-hidden bg-white ring-1 ring-gray-200 shadow-sm"
               >
-                {/* eslint-disable-next-line jsx-a11y/alt-text */}
                 <img
                   src={it.url}
                   alt={it.caption || "Voyage media"}
